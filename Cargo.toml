@@ -1,0 +1,19 @@
+[package]
+name = "raytrace_one_week_1st"
+description = "Yet another raytracing in one week"
+authors = ["CatCode79"]
+edition = "2021"
+license = "MIT"
+publish = false
+rust-version = "1.79"
+version = "0.1.0"
+
+[dependencies]
+shun_winput = { path = "../shun/crates/shun_winput" }
+
+bytemuck = "1"
+glam = "0.28"
+log = "0.4"
+pollster = "0.3"
+profiling = { version = "1", default-features = false, features = ["profile-with-tracy"]}
+wgpu = "0.20"

@@ -1,2 +1,1 @@
-# raytrace_one_week_1st
-raytrace_one_week_1st
+# raytrace_one_week
