@@ -1,8 +1,8 @@
-use crate::buffer::Buffer;
+//= IMPORTS ==================================================================
+use crate::scene::Scene;
 
 use glam::U16Vec2;
 use pollster::FutureExt as _;
-use shun_winput::window::Window;
 use wgpu::util::DeviceExt as _;
 use wgpu::{
     Adapter, AddressMode, BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout,
@@ -18,6 +18,8 @@ use wgpu::{
     TextureDescriptor, TextureDimension, TextureFormat, TextureSampleType, TextureUsages,
     TextureView, TextureViewDescriptor, TextureViewDimension, VertexState,
 };
+
+use shun_winput::window::Window;
 
 use std::num::NonZeroU16;
 
@@ -86,7 +88,7 @@ impl Renderer {
         }
     }
 
-    pub fn update(&mut self, buffer: &Buffer) -> Result<(), String> {
+    pub fn update(&mut self, buffer: &Scene) -> Result<(), String> {
         let (output, view) = self.get_output().map_err(|e| e.to_string())?;
         let mut encoder = self.create_command_encoder();
 

@@ -1,18 +1,26 @@
-mod buffer;
+//= MODS =====================================================================
+
+mod scene;
 mod renderer;
 
-use crate::buffer::Buffer;
+//= IMPORTS ==================================================================
+
+use crate::scene::Scene;
 use crate::renderer::Renderer;
 
 use shun_winput::mapping::InputMapping;
 use shun_winput::window::{Event, Window};
 
+//= CONSTANTS ================================================================
+
 // The additional values are used to obtain a padding of 256 relative to the buffer.
 const WIDTH: u16 = 1280 + 16;
 const HEIGHT: u16 = 720 + 39;
 
+//= MAIN STUFF! ==============================================================
+
 fn main() -> Result<(), String> {
-    let mut buffer = Buffer {
+    let mut buffer = Scene {
         width: WIDTH,
         height: HEIGHT,
         data: vec![0_u32; WIDTH as usize * HEIGHT as usize],

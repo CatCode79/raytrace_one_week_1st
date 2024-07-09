@@ -1,10 +1,16 @@
-pub struct Buffer {
+//= IMPORTS ==================================================================
+
+use glam::Vec3;
+
+//= SCENE ====================================================================
+
+pub struct Scene {
     pub(crate) width: u16,
     pub(crate) height: u16,
     pub(crate) data: Vec<u32>,
 }
 
-impl Buffer {
+impl Scene {
     pub(crate) fn compute(&mut self) {
         profiling::scope!("render");
 
@@ -17,5 +23,22 @@ impl Buffer {
 
             *pixel = u32::from_ne_bytes([(255.9999 * r) as u8, (255.9999 * g) as u8, 0_u8, 255_u8]);
         }
+    }
+}
+
+//= COLOR ====================================================================
+
+type Color = Vec3;
+
+//= RAY ======================================================================
+
+struct Ray {
+    pub origin: Vec3,
+    pub direction: Vec3,
+}
+
+impl Ray {
+    fn ray_color(ray: &Ray) -> Color {
+        return Color::new(0.0, 0.0, 0.0);
     }
 }
