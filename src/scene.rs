@@ -20,8 +20,44 @@ fn random_double() -> f64 {
 
 // Returns a random real in [min,max).
 #[inline(always)]
-fn random_double2(min: f64, max: f64) -> f64 {
+fn random_double_range(min: f64, max: f64) -> f64 {
     rand::thread_rng().gen_range(min..max)
+}
+
+#[inline(always)]
+fn random_vec3() -> DVec3 {
+    dvec3(random_double(), random_double(), random_double())
+}
+
+#[inline(always)]
+fn random_vec3_range(min: f64, max: f64) -> DVec3 {
+    dvec3(random_double_range(min, max), random_double_range(min, max), random_double_range(min, max))
+}
+
+#[inline(always)]
+fn random_vec3_in_unit_sphere() -> DVec3 {
+    loop {
+        let p = random_vec3_range(-1.0, 1.0);
+        if p.length_squared() < 1.0 {
+            return p;
+        }
+    }
+}
+
+#[inline(always)]
+fn random_vec3_normalized() -> DVec3 {
+    random_vec3_in_unit_sphere().normalize()
+}
+
+#[inline(always)]
+fn random_on_hemisphere(normal: DVec3) -> DVec3 {
+    let on_unit_sphere = random_vec3_normalized();
+    // In the same hemisphere as the normal
+    if on_unit_sphere.dot(normal) > 0.0 {
+        on_unit_sphere
+    } else {
+        -on_unit_sphere
+    }
 }
 //= TYPES ====================================================================
 
@@ -140,7 +176,8 @@ impl Camera {
     fn ray_color(&self, ray: &Ray, scene: &Scene) -> Color {
         let rec = scene.hit(ray, Interval::new(0.0, f64::INFINITY));
         if let Some(rec) = rec {
-            return 0.5 * (rec.normal + Color::new(1.0, 1.0, 1.0));
+            let direction = random_on_hemisphere(rec.normal);
+            return 0.5 * self.ray_color(&Ray::new(rec.p, direction), scene);
         }
 
         let unit_direction = ray.direction.normalize();
