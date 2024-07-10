@@ -70,6 +70,8 @@ pub struct Camera {
     pub(crate) height: u16,
     pub(crate) data: Vec<u32>,
 
+    samples_per_pixel: u8,   // Count of random samples for each pixel
+    pixel_samples_scale: f64,  // Color scale factor for a sum of pixel samples
     center: Point,         // Camera center
     pixel00_loc: Point,    // Location of pixel 0, 0
     pixel_delta_u: DVec3,  // Offset to pixel to the right
@@ -97,11 +99,14 @@ impl Camera {
             - dvec3(0.0, 0.0, focal_length) - viewport_u/2.0 - viewport_v/2.0;
         let pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
 
+        let samples_per_pixel = 10;
         Self {
             width,
             height,
             data: vec![0_u32; width as usize * height as usize],
 
+            samples_per_pixel,
+            pixel_samples_scale: 1.0 / samples_per_pixel as f64,
             center,
             pixel00_loc,
             pixel_delta_u,
@@ -112,19 +117,22 @@ impl Camera {
     pub(crate) fn render(&mut self, scene: &Scene) {
         profiling::scope!("render");
 
+        const INTENSITY: Interval = Interval::new(0.000, 0.999999);
+
         for i in 0..self.data.len() {
-            let width = i % self.width as usize;
-            let height = i / self.width as usize;
+            let w = i % self.width as usize;
+            let h = i / self.width as usize;
 
-            let pixel_center = self.pixel00_loc + (width as f64 * self.pixel_delta_u) + (height as f64 * self.pixel_delta_v);
-            let ray_direction = pixel_center - self.center;
-            let ray = Ray::new(self.center, ray_direction);
+            let mut color = Color::new(0.0, 0.0, 0.0);
+            for _ in 0..self.samples_per_pixel {
+                let ray = self.get_ray(w as f64, h as f64);
+                color += self.ray_color(&ray, scene);
+            }
 
-            let color = self.ray_color(&ray, scene);
             self.data[i] = u32::from_ne_bytes([
-                (255.9999 * color.x) as u8,
-                (255.9999 * color.y) as u8,
-                (255.9999 * color.z) as u8,
+                (255.9999 * INTENSITY.clamp(self.pixel_samples_scale * color.x)) as u8,
+                (255.9999 * INTENSITY.clamp(self.pixel_samples_scale * color.y)) as u8,
+                (255.9999 * INTENSITY.clamp(self.pixel_samples_scale * color.z)) as u8,
                 255_u8]);
         }
     }
@@ -139,10 +147,27 @@ impl Camera {
         let a = 0.5 * (unit_direction.y + 1.0);
         return (1.0 - a) * Color::new(1.0, 1.0, 1.0) + (a * Color::new(0.5, 0.7, 1.0));
     }
+
+    // Construct a camera ray originating from the origin and directed at randomly sampled
+    // point around the pixel location i, j.
+    fn get_ray(&self, w: f64, h: f64) -> Ray {
+        let offset = self.sample_square();
+        let pixel_sample = self.pixel00_loc
+            + ((w + offset.x) * self.pixel_delta_u)
+            + ((h + offset.y) * self.pixel_delta_v);
+
+        return Ray::new(self.center,  pixel_sample - self.center);
+    }
+
+    // Returns the vector to a random point in the [-.5,-.5]-[+.5,+.5] unit square.
+    fn sample_square(&self) -> DVec3 {
+        return dvec3(random_double() - 0.5, random_double() - 0.5, 0.0);
+    }
 }
 
 //= RAY ======================================================================
 
+#[derive(Debug)]
 struct Ray {
     pub origin: Point,
     pub direction: DVec3,
@@ -202,7 +227,7 @@ struct Interval {
 }
 
 impl Interval {
-    fn new(min: f64, max: f64) -> Self {
+    const fn new(min: f64, max: f64) -> Self {
         Self {
             min,
             max,
@@ -219,6 +244,16 @@ impl Interval {
 
     fn surrounds(&self, x: f64) -> bool {
         return self.min < x && x < self.max;
+    }
+
+    fn clamp(&self, x: f64) -> f64 {
+        if x < self.min {
+            return self.min
+        };
+        if x > self.max {
+            return self.max
+        };
+        return x;
     }
 
     fn empty() -> Self {
