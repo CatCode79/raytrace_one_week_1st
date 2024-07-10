@@ -2,15 +2,20 @@
 
 use glam::{dvec3, DVec3, uvec3, Vec3, vec3};
 
-//= SCENE ====================================================================
+//= TYPES ====================================================================
 
-pub struct Scene {
+type Color = DVec3;
+type Point = DVec3;
+
+//= BUFFER ===================================================================
+
+pub struct Buffer {
     pub(crate) width: u16,
     pub(crate) height: u16,
     pub(crate) data: Vec<u32>,
 }
 
-impl Scene {
+impl Buffer {
     pub(crate) fn compute(&mut self) {
         profiling::scope!("render");
 
@@ -51,19 +56,15 @@ impl Scene {
     }
 }
 
-//= COLOR ====================================================================
-
-type Color = DVec3;
-
 //= RAY ======================================================================
 
 struct Ray {
-    pub origin: DVec3,
+    pub origin: Point,
     pub direction: DVec3,
 }
 
 impl Ray {
-    fn new(origin: DVec3, direction: DVec3) -> Self {
+    fn new(origin: Point, direction: DVec3) -> Self {
         Self {
             origin,
             direction,
@@ -71,8 +72,21 @@ impl Ray {
     }
 
     fn color(self: &Ray) -> Color {
+        if self.hit_sphere(&Point::new(0.0, 0.0, -1.0), 0.5) {
+            return Color::new(1.0, 0.0, 0.0);
+        }
+
         let unit_direction = self.direction.normalize();
         let a = 0.5 * (unit_direction.y + 1.0);
         return (1.0 - a) * Color::new(1.0, 1.0, 1.0) + (a * Color::new(0.5, 0.7, 1.0));
+    }
+
+    fn hit_sphere(&self, center: &Point, radius: f64) -> bool {
+        let oc = *center - self.origin;
+        let a = self.direction.dot(self.direction);
+        let b = -2.0 * self.direction.dot(oc);
+        let c = oc.dot(oc) - radius*radius;
+        let discriminant = b*b - 4.0*a*c;
+        return discriminant >= 0.0;
     }
 }

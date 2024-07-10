@@ -5,7 +5,7 @@ mod renderer;
 
 //= IMPORTS ==================================================================
 
-use crate::scene::Scene;
+use crate::scene::Buffer;
 use crate::renderer::Renderer;
 
 use shun_winput::mapping::InputMapping;
@@ -20,7 +20,7 @@ const HEIGHT: u16 = 720 + 39;
 //= MAIN STUFF! ==============================================================
 
 fn main() -> Result<(), String> {
-    let mut buffer = Scene {
+    let mut buffer = Buffer {
         width: WIDTH,
         height: HEIGHT,
         data: vec![0_u32; WIDTH as usize * HEIGHT as usize],
