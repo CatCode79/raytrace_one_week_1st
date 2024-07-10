@@ -71,9 +71,15 @@ impl Ray {
         }
     }
 
+    fn at(&self, t: f64) -> Point {
+        return self.origin + t*self.direction;
+    }
+
     fn color(self: &Ray) -> Color {
-        if self.hit_sphere(&Point::new(0.0, 0.0, -1.0), 0.5) {
-            return Color::new(1.0, 0.0, 0.0);
+        let t = self.hit_sphere(&Point::new(0.0, 0.0, -1.0), 0.5);
+        if t > 0.0 {
+            let n = (self.at(t) - dvec3(0.0, 0.0, -1.0)).normalize();
+            return 0.5 * Color::new(n.x+1.0, n.y+1.0, n.z+1.0);
         }
 
         let unit_direction = self.direction.normalize();
@@ -81,12 +87,16 @@ impl Ray {
         return (1.0 - a) * Color::new(1.0, 1.0, 1.0) + (a * Color::new(0.5, 0.7, 1.0));
     }
 
-    fn hit_sphere(&self, center: &Point, radius: f64) -> bool {
+    fn hit_sphere(&self, center: &Point, radius: f64) -> f64 {
         let oc = *center - self.origin;
         let a = self.direction.dot(self.direction);
         let b = -2.0 * self.direction.dot(oc);
         let c = oc.dot(oc) - radius*radius;
         let discriminant = b*b - 4.0*a*c;
-        return discriminant >= 0.0;
+        if discriminant < 0.0 {
+            return -1.0;
+        } else {
+            return (-b - discriminant.sqrt() ) / (2.0*a);
+        }
     }
 }

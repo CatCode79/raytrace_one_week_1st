@@ -28,7 +28,7 @@ fn main() -> Result<(), String> {
 
     let input_mapping = InputMapping::new();
     let mut window = Window::new(
-        "Raytrace One Week".to_string(),
+        "Raytrace One Week 1st".to_string(),
         WIDTH,
         HEIGHT,
         input_mapping,
