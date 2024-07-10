@@ -80,12 +80,12 @@ impl Scene {
 }
 
 impl Hittable for Scene {
-    fn hit(&self, ray: &Ray, ray_tmin: f64, ray_tmax: f64) -> Option<HitRecord> {
-        let mut closest_so_far = ray_tmax;
+    fn hit(&self, ray: &Ray, ray_t: Interval) -> Option<HitRecord> {
+        let mut closest_so_far = ray_t.max;
         let mut hit_anything = None;
 
         for hittable in &self.hittables {
-            let temp_rec = hittable.hit(ray, ray_tmin, closest_so_far);
+            let temp_rec = hittable.hit(ray, Interval::new(ray_t.min, closest_so_far));
             if let Some(temp_rec) = temp_rec {
                 closest_so_far = temp_rec.t;
                 hit_anything = Some(temp_rec);
@@ -116,7 +116,7 @@ impl Ray {
     }
 
     fn color(self: &Ray, scene: &Scene) -> Color {
-        let rec = scene.hit(self, 0.0, f64::INFINITY);
+        let rec = scene.hit(self, Interval::new(0.0, f64::INFINITY));
         if let Some(rec) = rec {
             return 0.5 * (rec.normal + Color::new(1.0, 1.0, 1.0));
         }
@@ -157,7 +157,49 @@ impl HitRecord {
 }
 
 trait Hittable {
-    fn hit(&self, ray: &Ray, ray_tmin: f64, ray_tmax: f64) -> Option<HitRecord>;
+    fn hit(&self, ray: &Ray, ray_t: Interval) -> Option<HitRecord>;
+}
+
+//= INTERVAL =================================================================
+
+struct Interval {
+    min: f64,
+    max: f64,
+}
+
+impl Interval {
+    fn new(min: f64, max: f64) -> Self {
+        Self {
+            min,
+            max,
+        }
+    }
+
+    fn size(&self) -> f64 {
+        return self.max - self.min;
+    }
+
+    fn contains(&self, x: f64) -> bool {
+        return self.min <= x && x <= self.max;
+    }
+
+    fn surrounds(&self, x: f64) -> bool {
+        return self.min < x && x < self.max;
+    }
+
+    fn empty() -> Self {
+        Self::new(f64::INFINITY, f64::NEG_INFINITY)
+    }
+
+    fn universe() -> Self {
+        Self::new(f64::NEG_INFINITY, f64::INFINITY)
+    }
+}
+
+impl Default for Interval {
+    fn default() -> Self {
+        Interval::empty()
+    }
 }
 
 //= SPHERE ===================================================================
@@ -177,7 +219,7 @@ impl Sphere {
 }
 
 impl Hittable for Sphere {
-    fn hit(&self, ray: &Ray, ray_tmin: f64, ray_tmax: f64) -> Option<HitRecord> {
+    fn hit(&self, ray: &Ray, ray_t: Interval) -> Option<HitRecord> {
         let oc = self.center - ray.origin;
         let a = ray.direction.length_squared();
         let h = ray.direction.dot(oc);
@@ -192,9 +234,9 @@ impl Hittable for Sphere {
 
         // Find the nearest root that lies in the acceptable range.
         let mut root = (h - sqrtd) / a;
-        if root <= ray_tmin || ray_tmax <= root {
+        if !ray_t.surrounds(root) {
             root = (h + sqrtd) / a;
-            if root <= ray_tmin || ray_tmax <= root {
+            if !ray_t.surrounds(root) {
                 return None;
             }
         }
