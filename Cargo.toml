@@ -16,4 +16,5 @@ glam = "0.28"
 log = "0.4"
 pollster = "0.3"
 profiling = { version = "1", default-features = false, features = ["profile-with-tracy"]}
+rand = "0.8"
 wgpu = "0.20"

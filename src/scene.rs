@@ -3,6 +3,7 @@
 use glam::{dvec3, DVec3, uvec3, Vec3, vec3};
 
 use std::f64::consts::PI;
+use rand::Rng;
 
 //= UTILITY FUNCTIONS ========================================================
 
@@ -11,6 +12,17 @@ fn degrees_to_radians(degrees: f64) -> f64 {
     return degrees * PI / 180.0;
 }
 
+// Returns a random real in [0,1).
+#[inline(always)]
+fn random_double() -> f64 {
+    rand::random()
+}
+
+// Returns a random real in [min,max).
+#[inline(always)]
+fn random_double2(min: f64, max: f64) -> f64 {
+    rand::thread_rng().gen_range(min..max)
+}
 //= TYPES ====================================================================
 
 type Color = DVec3;
