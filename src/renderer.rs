@@ -1,5 +1,5 @@
 //= IMPORTS ==================================================================
-use crate::scene::Scene;
+use crate::scene::{Camera, Scene};
 
 use glam::U16Vec2;
 use pollster::FutureExt as _;
@@ -88,7 +88,7 @@ impl Renderer {
         }
     }
 
-    pub fn update(&mut self, buffer: &Scene) -> Result<(), String> {
+    pub fn update(&mut self, camera: &Camera) -> Result<(), String> {
         let (output, view) = self.get_output().map_err(|e| e.to_string())?;
         let mut encoder = self.create_command_encoder();
 
@@ -98,7 +98,7 @@ impl Renderer {
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Temporary Buffer"),
-                contents: bytemuck::cast_slice(buffer.data.as_slice()),
+                contents: bytemuck::cast_slice(camera.data.as_slice()),
                 usage: wgpu::BufferUsages::COPY_SRC,
             });
         encoder.copy_buffer_to_texture(
@@ -106,8 +106,8 @@ impl Renderer {
                 buffer: &temp_buf,
                 layout: ImageDataLayout {
                     offset: 0,
-                    bytes_per_row: Some(4 * buffer.width as u32),
-                    rows_per_image: Some(buffer.height as u32),
+                    bytes_per_row: Some(4 * camera.width as u32),
+                    rows_per_image: Some(camera.height as u32),
                 },
             },
             ImageCopyTexture {

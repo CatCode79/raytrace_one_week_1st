@@ -19,62 +19,17 @@ type Point = DVec3;
 //= SCENE ====================================================================
 
 pub struct Scene {
-    pub width: u16,
-    pub height: u16,
-    pub data: Vec<u32>,
     pub hittables: Vec<Sphere>,
 }
 
 impl Scene {
-    pub fn new(width: u16, height: u16) -> Self {
+    pub fn new() -> Self {
         let mut hittables = Vec::new();
         hittables.push(Sphere::new(Point::new(0.0, 0.0, -1.0), 0.5));
         hittables.push(Sphere::new(Point::new(0.0, -100.5, -1.0), 100.0));
 
         Self {
-            width,
-            height,
-            data: vec![0_u32; width as usize * height as usize],
             hittables
-        }
-    }
-
-    pub fn compute(&mut self) {
-        profiling::scope!("render");
-
-        // Camera
-        let focal_length = 1.0;
-        let viewport_height = 2.0;
-        let viewport_width = viewport_height * (self.width as f64 / self.height as f64);
-        let camera_center = dvec3(0.0, 0.0, 0.0);
-
-        // Calculate the vectors across the horizontal and down the vertical viewport edges.
-        let viewport_u = dvec3(viewport_width, 0.0, 0.0);
-        let viewport_v = dvec3(0.0, -viewport_height, 0.0);
-
-        // Calculate the horizontal and vertical delta vectors from pixel to pixel.
-        let pixel_delta_u = viewport_u / self.width as f64;
-        let pixel_delta_v = viewport_v / self.height as f64;
-
-        // Calculate the location of the upper left pixel.
-        let viewport_upper_left = camera_center
-            - dvec3(0.0, 0.0, focal_length) - viewport_u/2.0 - viewport_v/2.0;
-        let pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
-
-        for i in 0..self.data.len() {
-            let width = i % self.width as usize;
-            let height = i / self.width as usize;
-
-            let pixel_center = pixel00_loc + (width as f64 * pixel_delta_u) + (height as f64 * pixel_delta_v);
-            let ray_direction = pixel_center - camera_center;
-            let ray = Ray::new(camera_center, ray_direction);
-
-            let color = ray.color(&self);
-            self.data[i] = u32::from_ne_bytes([
-                (255.9999 * color.x) as u8,
-                (255.9999 * color.y) as u8,
-                (255.9999 * color.z) as u8,
-                255_u8]);
         }
     }
 }
@@ -96,6 +51,84 @@ impl Hittable for Scene {
     }
 }
 
+//= CAMERA ===================================================================
+
+pub struct Camera {
+    pub(crate) width: u16,
+    pub(crate) height: u16,
+    pub(crate) data: Vec<u32>,
+
+    center: Point,         // Camera center
+    pixel00_loc: Point,    // Location of pixel 0, 0
+    pixel_delta_u: DVec3,  // Offset to pixel to the right
+    pixel_delta_v: DVec3,  // Offset to pixel below
+}
+
+impl Camera {
+    pub(crate) fn new(width: u16, height: u16) -> Self {
+        // Camera
+        let focal_length = 1.0;
+        let viewport_height = 2.0;
+        let viewport_width = viewport_height * (width as f64 / height as f64);
+        let center = dvec3(0.0, 0.0, 0.0);
+
+        // Calculate the vectors across the horizontal and down the vertical viewport edges.
+        let viewport_u = dvec3(viewport_width, 0.0, 0.0);
+        let viewport_v = dvec3(0.0, -viewport_height, 0.0);
+
+        // Calculate the horizontal and vertical delta vectors from pixel to pixel.
+        let pixel_delta_u = viewport_u / width as f64;
+        let pixel_delta_v = viewport_v / height as f64;
+
+        // Calculate the location of the upper left pixel.
+        let viewport_upper_left = center
+            - dvec3(0.0, 0.0, focal_length) - viewport_u/2.0 - viewport_v/2.0;
+        let pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
+
+        Self {
+            width,
+            height,
+            data: vec![0_u32; width as usize * height as usize],
+
+            center,
+            pixel00_loc,
+            pixel_delta_u,
+            pixel_delta_v,
+        }
+    }
+
+    pub(crate) fn render(&mut self, scene: &Scene) {
+        profiling::scope!("render");
+
+        for i in 0..self.data.len() {
+            let width = i % self.width as usize;
+            let height = i / self.width as usize;
+
+            let pixel_center = self.pixel00_loc + (width as f64 * self.pixel_delta_u) + (height as f64 * self.pixel_delta_v);
+            let ray_direction = pixel_center - self.center;
+            let ray = Ray::new(self.center, ray_direction);
+
+            let color = self.ray_color(&ray, scene);
+            self.data[i] = u32::from_ne_bytes([
+                (255.9999 * color.x) as u8,
+                (255.9999 * color.y) as u8,
+                (255.9999 * color.z) as u8,
+                255_u8]);
+        }
+    }
+
+    fn ray_color(&self, ray: &Ray, scene: &Scene) -> Color {
+        let rec = scene.hit(ray, Interval::new(0.0, f64::INFINITY));
+        if let Some(rec) = rec {
+            return 0.5 * (rec.normal + Color::new(1.0, 1.0, 1.0));
+        }
+
+        let unit_direction = ray.direction.normalize();
+        let a = 0.5 * (unit_direction.y + 1.0);
+        return (1.0 - a) * Color::new(1.0, 1.0, 1.0) + (a * Color::new(0.5, 0.7, 1.0));
+    }
+}
+
 //= RAY ======================================================================
 
 struct Ray {
@@ -113,17 +146,6 @@ impl Ray {
 
     fn at(&self, t: f64) -> Point {
         return self.origin + t*self.direction;
-    }
-
-    fn color(self: &Ray, scene: &Scene) -> Color {
-        let rec = scene.hit(self, Interval::new(0.0, f64::INFINITY));
-        if let Some(rec) = rec {
-            return 0.5 * (rec.normal + Color::new(1.0, 1.0, 1.0));
-        }
-
-        let unit_direction = self.direction.normalize();
-        let a = 0.5 * (unit_direction.y + 1.0);
-        return (1.0 - a) * Color::new(1.0, 1.0, 1.0) + (a * Color::new(0.5, 0.7, 1.0));
     }
 }
 
