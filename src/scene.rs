@@ -108,6 +108,7 @@ pub struct Camera {
 
     samples_per_pixel: u8,   // Count of random samples for each pixel
     pixel_samples_scale: f64,  // Color scale factor for a sum of pixel samples
+    max_depth: u8,   // Maximum number of ray bounces into scene
     center: Point,         // Camera center
     pixel00_loc: Point,    // Location of pixel 0, 0
     pixel_delta_u: DVec3,  // Offset to pixel to the right
@@ -135,7 +136,7 @@ impl Camera {
             - dvec3(0.0, 0.0, focal_length) - viewport_u/2.0 - viewport_v/2.0;
         let pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
 
-        let samples_per_pixel = 10;
+        let samples_per_pixel = 4;
         Self {
             width,
             height,
@@ -143,6 +144,7 @@ impl Camera {
 
             samples_per_pixel,
             pixel_samples_scale: 1.0 / samples_per_pixel as f64,
+            max_depth: 10,
             center,
             pixel00_loc,
             pixel_delta_u,
@@ -162,7 +164,7 @@ impl Camera {
             let mut color = Color::new(0.0, 0.0, 0.0);
             for _ in 0..self.samples_per_pixel {
                 let ray = self.get_ray(w as f64, h as f64);
-                color += self.ray_color(&ray, scene);
+                color += self.ray_color(&ray, self.max_depth, scene);
             }
 
             self.data[i] = u32::from_ne_bytes([
@@ -173,11 +175,16 @@ impl Camera {
         }
     }
 
-    fn ray_color(&self, ray: &Ray, scene: &Scene) -> Color {
-        let rec = scene.hit(ray, Interval::new(0.0, f64::INFINITY));
+    fn ray_color(&self, ray: &Ray, depth: u8, scene: &Scene) -> Color {
+        // If we've exceeded the ray bounce limit, no more light is gathered.
+        if depth <= 0 {
+            return Color::new(0.0,0.0,0.0);
+        }
+
+        let rec = scene.hit(ray, Interval::new(0.001, f64::INFINITY));
         if let Some(rec) = rec {
             let direction = random_on_hemisphere(rec.normal);
-            return 0.5 * self.ray_color(&Ray::new(rec.p, direction), scene);
+            return 0.5 * self.ray_color(&Ray::new(rec.p, direction), depth-1, scene);
         }
 
         let unit_direction = ray.direction.normalize();
