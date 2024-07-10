@@ -5,7 +5,7 @@ mod renderer;
 
 //= IMPORTS ==================================================================
 
-use crate::scene::Buffer;
+use crate::scene::Scene;
 use crate::renderer::Renderer;
 
 use shun_winput::mapping::InputMapping;
@@ -20,11 +20,7 @@ const HEIGHT: u16 = 720 + 39;
 //= MAIN STUFF! ==============================================================
 
 fn main() -> Result<(), String> {
-    let mut buffer = Buffer {
-        width: WIDTH,
-        height: HEIGHT,
-        data: vec![0_u32; WIDTH as usize * HEIGHT as usize],
-    };
+    let mut scene = Scene::new(WIDTH, HEIGHT);
 
     let input_mapping = InputMapping::new();
     let mut window = Window::new(
@@ -41,17 +37,17 @@ fn main() -> Result<(), String> {
         for event in events {
             match event {
                 Event::Resize { width, height } => {
-                    buffer.width = width.get();
-                    buffer.height = height.get();
-                    buffer.data = vec![0_u32; buffer.width as usize * buffer.height as usize];
+                    scene.width = width.get();
+                    scene.height = height.get();
+                    scene.data = vec![0_u32; scene.width as usize * scene.height as usize];
 
                     renderer.resize(width, height);
                 }
             }
         }
 
-        buffer.compute();
-        renderer.update(&buffer)?;
+        scene.compute();
+        renderer.update(&scene)?;
 
         renderer.present();
         profiling::finish_frame!();

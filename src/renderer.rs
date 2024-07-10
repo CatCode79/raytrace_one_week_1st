@@ -1,5 +1,5 @@
 //= IMPORTS ==================================================================
-use crate::scene::Buffer;
+use crate::scene::Scene;
 
 use glam::U16Vec2;
 use pollster::FutureExt as _;
@@ -88,7 +88,7 @@ impl Renderer {
         }
     }
 
-    pub fn update(&mut self, buffer: &Buffer) -> Result<(), String> {
+    pub fn update(&mut self, buffer: &Scene) -> Result<(), String> {
         let (output, view) = self.get_output().map_err(|e| e.to_string())?;
         let mut encoder = self.create_command_encoder();
 
