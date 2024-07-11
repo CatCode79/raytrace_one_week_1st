@@ -50,7 +50,7 @@ fn random_vec3_normalized() -> DVec3 {
 }
 
 #[inline(always)]
-fn random_on_hemisphere(normal: DVec3) -> DVec3 {
+fn random_vec3_on_hemisphere(normal: DVec3) -> DVec3 {
     let on_unit_sphere = random_vec3_normalized();
     // In the same hemisphere as the normal
     if on_unit_sphere.dot(normal) > 0.0 {
@@ -59,6 +59,7 @@ fn random_on_hemisphere(normal: DVec3) -> DVec3 {
         -on_unit_sphere
     }
 }
+
 //= TYPES ====================================================================
 
 type Color = DVec3;
@@ -136,7 +137,7 @@ impl Camera {
             - dvec3(0.0, 0.0, focal_length) - viewport_u/2.0 - viewport_v/2.0;
         let pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
 
-        let samples_per_pixel = 4;
+        let samples_per_pixel = 6;
         Self {
             width,
             height,
@@ -183,7 +184,7 @@ impl Camera {
 
         let rec = scene.hit(ray, Interval::new(0.001, f64::INFINITY));
         if let Some(rec) = rec {
-            let direction = random_on_hemisphere(rec.normal);
+            let direction = rec.normal + random_vec3_normalized();
             return 0.5 * self.ray_color(&Ray::new(rec.p, direction), depth-1, scene);
         }
 
