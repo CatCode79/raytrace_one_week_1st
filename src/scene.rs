@@ -3,6 +3,7 @@
 use glam::{dvec3, DVec3, uvec3, Vec3, vec3};
 
 use std::f64::consts::PI;
+use std::rc::Rc;
 use rand::Rng;
 
 //= UTILITY FUNCTIONS ========================================================
@@ -34,6 +35,14 @@ fn random_vec3_range(min: f64, max: f64) -> DVec3 {
     dvec3(random_double_range(min, max), random_double_range(min, max), random_double_range(min, max))
 }
 
+
+#[inline(always)]
+// Return true if the vector is close to zero in all dimensions.
+fn near_zero(e: DVec3) -> bool {
+    let s = 1e-8;
+    return (e[0].abs() < s) && (e[1].abs() < s) && (e[2].abs() < s);
+}
+
 #[inline(always)]
 fn random_vec3_in_unit_sphere() -> DVec3 {
     loop {
@@ -60,6 +69,11 @@ fn random_vec3_on_hemisphere(normal: DVec3) -> DVec3 {
     }
 }
 
+#[inline(always)]
+fn reflect(v: DVec3, n: DVec3) -> DVec3 {
+    return v - 2.0 * v.dot(n) * n;
+}
+
 //= TYPES ====================================================================
 
 type Color = DVec3;
@@ -73,9 +87,16 @@ pub struct Scene {
 
 impl Scene {
     pub fn new() -> Self {
+        let material_ground = Material::Lambertian(Lambertian::new(Color::new(0.8, 0.8, 0.0)));
+        let material_center = Material::Lambertian(Lambertian::new(Color::new(0.1, 0.2, 0.5)));
+        let material_left   = Material::Metal(Metal::new(Color::new(0.8, 0.8, 0.8), 0.3));
+        let material_right  = Material::Metal(Metal::new(Color::new(0.8, 0.6, 0.2), 1.0));
+
         let mut hittables = Vec::new();
-        hittables.push(Sphere::new(Point::new(0.0, 0.0, -1.0), 0.5));
-        hittables.push(Sphere::new(Point::new(0.0, -100.5, -1.0), 100.0));
+        hittables.push(Sphere::new(Point::new( 0.0, -100.5, -1.0), 100.0, material_ground));
+        hittables.push(Sphere::new(Point::new( 0.0,    0.0, -1.2),   0.5, material_center));
+        hittables.push(Sphere::new(Point::new(-1.0,    0.0, -1.0),   0.5, material_left));
+        hittables.push(Sphere::new(Point::new( 1.0,    0.0, -1.0),   0.5, material_right));
 
         Self {
             hittables
@@ -137,7 +158,7 @@ impl Camera {
             - dvec3(0.0, 0.0, focal_length) - viewport_u/2.0 - viewport_v/2.0;
         let pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
 
-        let samples_per_pixel = 6;
+        let samples_per_pixel = 10;
         Self {
             width,
             height,
@@ -183,9 +204,25 @@ impl Camera {
         }
 
         let rec = scene.hit(ray, Interval::new(0.001, f64::INFINITY));
-        if let Some(rec) = rec {
-            let direction = rec.normal + random_vec3_normalized();
-            return 0.5 * self.ray_color(&Ray::new(rec.p, direction), depth-1, scene);
+        if let Some(mut rec) = rec {
+            let scattered = &mut Ray { origin: Default::default(), direction: Default::default() };
+            let mut attenuation = Color::default();
+            return match rec.material.clone() {
+                Material::Lambertian(ref lambertian) => {
+                    if lambertian.scatter(ray, rec, &mut attenuation, scattered) {
+                        attenuation * self.ray_color(scattered, depth - 1, scene)
+                    } else {
+                        Color::new(0.0, 0.0, 0.0)
+                    }
+                }
+                Material::Metal(ref metal) => {
+                    if metal.scatter(ray, rec, &mut attenuation, scattered) {
+                        attenuation * self.ray_color(scattered, depth - 1, scene)
+                    } else {
+                        Color::new(0.0, 0.0, 0.0)
+                    }
+                }
+            }
         }
 
         let unit_direction = ray.direction.normalize();
@@ -233,20 +270,21 @@ impl Ray {
 
 //= HITTABLE =================================================================
 
-#[derive(Default)]
 struct HitRecord {
     p: Point,
     normal: DVec3,
+    material: Material,
     t: f64,
     front_face: bool,
 }
 
 impl HitRecord {
-    fn new(t: f64, p: Point) -> Self {
+    fn new(t: f64, p: Point, material: Material) -> Self {
         Self {
             p,
-            normal: Default::default(),
+            normal: DVec3::ZERO,
             t,
+            material,
             front_face: false,
         }
     }
@@ -316,18 +354,80 @@ impl Default for Interval {
     }
 }
 
+//= MATERIAL =================================================================
+
+#[derive(Clone)]
+enum Material {
+    Lambertian(Lambertian),
+    Metal(Metal),
+}
+
+#[derive(Clone)]
+struct Lambertian {
+    albedo: Color,
+}
+
+impl Lambertian {
+    fn new(albedo: Color) -> Self {
+        Self {
+            albedo,
+        }
+    }
+
+    fn scatter(&self, _r_in: &Ray, rec: HitRecord, attenuation: &mut Color, scattered: &mut Ray) -> bool {
+        let mut scatter_direction = rec.normal + random_vec3_in_unit_sphere();
+
+        // Catch degenerate scatter direction
+        if near_zero(scatter_direction) {
+            scatter_direction = rec.normal;
+        }
+
+        *scattered = Ray::new(rec.p, scatter_direction);
+        *attenuation = self.albedo;
+        return true;
+    }
+}
+
+#[derive(Clone)]
+struct Metal {
+    albedo: Color,
+    fuzzy: f64,
+}
+
+impl Metal {
+    fn new(albedo: Color, fuzzy: f64) -> Self {
+        Self {
+            albedo,
+            fuzzy: fuzzy.clamp(0.0, 1.0),
+        }
+    }
+
+    fn scatter(&self, r_in: &Ray, rec: HitRecord, attenuation: &mut Color, scattered: &mut Ray) -> bool {
+
+        let mut reflected = reflect(r_in.direction, rec.normal);
+        reflected = reflected.normalize() + (self.fuzzy * random_vec3_in_unit_sphere());
+
+        *scattered = Ray::new(rec.p, reflected);
+        *attenuation = self.albedo;
+
+        scattered.direction.dot(rec.normal) > 0.0
+    }
+}
+
 //= SPHERE ===================================================================
 
 struct Sphere {
     center: Point,
     radius: f64,
+    material: Material
 }
 
 impl Sphere {
-    fn new(center: Point, radius: f64) -> Self {
+    fn new(center: Point, radius: f64, material: Material) -> Self {
         Self {
             center,
             radius,
+            material,
         }
     }
 }
@@ -355,7 +455,7 @@ impl Hittable for Sphere {
             }
         }
 
-        let mut rec = HitRecord::new(root, ray.at(root));
+        let mut rec = HitRecord::new(root, ray.at(root), self.material.clone());
         let outward_normal = (rec.p - self.center) / self.radius;
         rec.set_face_normal(ray, &outward_normal);
 
