@@ -1,5 +1,6 @@
 //= IMPORTS ==================================================================
-use crate::scene::{Camera, Scene};
+
+use crate::scene::Camera;
 
 use glam::U16Vec2;
 use pollster::FutureExt as _;

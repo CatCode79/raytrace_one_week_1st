@@ -1,15 +1,14 @@
 //= IMPORTS ==================================================================
 
-use glam::{dvec3, DVec3, uvec3, Vec3, vec3};
+use glam::{dvec3, DVec3};
+use rand::Rng;
 
 use std::f64::consts::PI;
-use std::rc::Rc;
-use rand::Rng;
 
 //= UTILITY FUNCTIONS ========================================================
 
 #[inline(always)]
-fn degrees_to_radians(degrees: f64) -> f64 {
+fn _degrees_to_radians(degrees: f64) -> f64 {
     return degrees * PI / 180.0;
 }
 
@@ -26,7 +25,7 @@ fn random_double_range(min: f64, max: f64) -> f64 {
 }
 
 #[inline(always)]
-fn random_vec3() -> DVec3 {
+fn _random_vec3() -> DVec3 {
     dvec3(random_double(), random_double(), random_double())
 }
 
@@ -54,13 +53,13 @@ fn random_vec3_in_unit_sphere() -> DVec3 {
 }
 
 #[inline(always)]
-fn random_vec3_normalized() -> DVec3 {
+fn _random_vec3_normalized() -> DVec3 {
     random_vec3_in_unit_sphere().normalize()
 }
 
 #[inline(always)]
-fn random_vec3_on_hemisphere(normal: DVec3) -> DVec3 {
-    let on_unit_sphere = random_vec3_normalized();
+fn _random_vec3_on_hemisphere(normal: DVec3) -> DVec3 {
+    let on_unit_sphere = _random_vec3_normalized();
     // In the same hemisphere as the normal
     if on_unit_sphere.dot(normal) > 0.0 {
         on_unit_sphere
@@ -81,8 +80,8 @@ type Point = DVec3;
 
 //= SCENE ====================================================================
 
-pub struct Scene {
-    pub hittables: Vec<Sphere>,
+pub(crate) struct Scene {
+    pub(crate) hittables: Vec<Sphere>,
 }
 
 impl Scene {
@@ -204,7 +203,7 @@ impl Camera {
         }
 
         let rec = scene.hit(ray, Interval::new(0.001, f64::INFINITY));
-        if let Some(mut rec) = rec {
+        if let Some(rec) = rec {
             let scattered = &mut Ray { origin: Default::default(), direction: Default::default() };
             let mut attenuation = Color::default();
             return match rec.material.clone() {
@@ -317,11 +316,11 @@ impl Interval {
         }
     }
 
-    fn size(&self) -> f64 {
+    fn _size(&self) -> f64 {
         return self.max - self.min;
     }
 
-    fn contains(&self, x: f64) -> bool {
+    fn _contains(&self, x: f64) -> bool {
         return self.min <= x && x <= self.max;
     }
 
@@ -343,7 +342,7 @@ impl Interval {
         Self::new(f64::INFINITY, f64::NEG_INFINITY)
     }
 
-    fn universe() -> Self {
+    fn _universe() -> Self {
         Self::new(f64::NEG_INFINITY, f64::INFINITY)
     }
 }
@@ -416,7 +415,7 @@ impl Metal {
 
 //= SPHERE ===================================================================
 
-struct Sphere {
+pub(crate) struct Sphere {
     center: Point,
     radius: f64,
     material: Material

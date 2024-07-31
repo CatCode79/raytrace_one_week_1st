@@ -20,7 +20,7 @@ const HEIGHT: u16 = 720 + 39;
 //= MAIN STUFF! ==============================================================
 
 fn main() -> Result<(), String> {
-    let mut scene = Scene::new();
+    let scene = Scene::new();
     let mut camera = Camera::new(WIDTH, HEIGHT);
 
     let input_mapping = InputMapping::new();
