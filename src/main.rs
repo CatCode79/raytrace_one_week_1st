@@ -1,12 +1,12 @@
 //= MODS =====================================================================
 
-mod scene;
 mod renderer;
+mod scene;
 
 //= IMPORTS ==================================================================
 
-use crate::scene::{Camera, Scene};
 use crate::renderer::Renderer;
+use crate::scene::{Camera, Scene};
 
 use shun_winput::mapping::InputMapping;
 use shun_winput::window::{Event, Window};

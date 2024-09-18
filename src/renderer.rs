@@ -5,7 +5,21 @@ use crate::scene::Camera;
 use glam::U16Vec2;
 use pollster::FutureExt as _;
 use wgpu::util::DeviceExt as _;
-use wgpu::{Adapter, AddressMode, BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout, BindGroupLayoutDescriptor, BindGroupLayoutEntry, BindingResource, BindingType, ColorTargetState, ColorWrites, CommandBuffer, CommandEncoder, CommandEncoderDescriptor, CompositeAlphaMode, Device, DeviceDescriptor, Extent3d, Features, FilterMode, FragmentState, ImageCopyTexture, ImageDataLayout, Instance, InstanceDescriptor, InstanceFlags, Limits, LoadOp, MemoryHints, MultisampleState, Operations, PipelineCompilationOptions, PipelineLayoutDescriptor, PowerPreference, PresentMode, PrimitiveState, Queue, RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline, RenderPipelineDescriptor, RequestAdapterOptions, Sampler, SamplerBindingType, SamplerDescriptor, ShaderModuleDescriptor, ShaderSource, ShaderStages, StoreOp, Surface, SurfaceConfiguration, SurfaceError, SurfaceTargetUnsafe, SurfaceTexture, TextureDescriptor, TextureDimension, TextureFormat, TextureSampleType, TextureUsages, TextureView, TextureViewDescriptor, TextureViewDimension, VertexState};
+use wgpu::{
+    Adapter, AddressMode, BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout,
+    BindGroupLayoutDescriptor, BindGroupLayoutEntry, BindingResource, BindingType,
+    ColorTargetState, ColorWrites, CommandBuffer, CommandEncoder, CommandEncoderDescriptor,
+    CompositeAlphaMode, Device, DeviceDescriptor, Extent3d, Features, FilterMode, FragmentState,
+    ImageCopyTexture, ImageDataLayout, Instance, InstanceDescriptor, InstanceFlags, Limits, LoadOp,
+    MemoryHints, MultisampleState, Operations, PipelineCompilationOptions,
+    PipelineLayoutDescriptor, PowerPreference, PresentMode, PrimitiveState, Queue,
+    RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline, RenderPipelineDescriptor,
+    RequestAdapterOptions, Sampler, SamplerBindingType, SamplerDescriptor, ShaderModuleDescriptor,
+    ShaderSource, ShaderStages, StoreOp, Surface, SurfaceConfiguration, SurfaceError,
+    SurfaceTargetUnsafe, SurfaceTexture, TextureDescriptor, TextureDimension, TextureFormat,
+    TextureSampleType, TextureUsages, TextureView, TextureViewDescriptor, TextureViewDimension,
+    VertexState,
+};
 
 use shun_winput::window::Window;
 

@@ -31,9 +31,12 @@ fn _random_vec3() -> DVec3 {
 
 #[inline(always)]
 fn random_vec3_range(min: f64, max: f64) -> DVec3 {
-    dvec3(random_double_range(min, max), random_double_range(min, max), random_double_range(min, max))
+    dvec3(
+        random_double_range(min, max),
+        random_double_range(min, max),
+        random_double_range(min, max),
+    )
 }
-
 
 #[inline(always)]
 // Return true if the vector is close to zero in all dimensions.
@@ -88,18 +91,24 @@ impl Scene {
     pub fn new() -> Self {
         let material_ground = Material::Lambertian(Lambertian::new(Color::new(0.8, 0.8, 0.0)));
         let material_center = Material::Lambertian(Lambertian::new(Color::new(0.1, 0.2, 0.5)));
-        let material_left   = Material::Metal(Metal::new(Color::new(0.8, 0.8, 0.8), 0.3));
-        let material_right  = Material::Metal(Metal::new(Color::new(0.8, 0.6, 0.2), 1.0));
+        let material_left = Material::Metal(Metal::new(Color::new(0.8, 0.8, 0.8), 0.3));
+        let material_right = Material::Metal(Metal::new(Color::new(0.8, 0.6, 0.2), 1.0));
 
         let mut hittables = Vec::new();
-        hittables.push(Sphere::new(Point::new( 0.0, -100.5, -1.0), 100.0, material_ground));
-        hittables.push(Sphere::new(Point::new( 0.0,    0.0, -1.2),   0.5, material_center));
-        hittables.push(Sphere::new(Point::new(-1.0,    0.0, -1.0),   0.5, material_left));
-        hittables.push(Sphere::new(Point::new( 1.0,    0.0, -1.0),   0.5, material_right));
+        hittables.push(Sphere::new(
+            Point::new(0.0, -100.5, -1.0),
+            100.0,
+            material_ground,
+        ));
+        hittables.push(Sphere::new(
+            Point::new(0.0, 0.0, -1.2),
+            0.5,
+            material_center,
+        ));
+        hittables.push(Sphere::new(Point::new(-1.0, 0.0, -1.0), 0.5, material_left));
+        hittables.push(Sphere::new(Point::new(1.0, 0.0, -1.0), 0.5, material_right));
 
-        Self {
-            hittables
-        }
+        Self { hittables }
     }
 }
 
@@ -127,13 +136,13 @@ pub struct Camera {
     pub(crate) height: u16,
     pub(crate) data: Vec<u32>,
 
-    samples_per_pixel: u8,   // Count of random samples for each pixel
-    pixel_samples_scale: f64,  // Color scale factor for a sum of pixel samples
-    max_depth: u8,   // Maximum number of ray bounces into scene
-    center: Point,         // Camera center
-    pixel00_loc: Point,    // Location of pixel 0, 0
-    pixel_delta_u: DVec3,  // Offset to pixel to the right
-    pixel_delta_v: DVec3,  // Offset to pixel below
+    samples_per_pixel: u8,    // Count of random samples for each pixel
+    pixel_samples_scale: f64, // Color scale factor for a sum of pixel samples
+    max_depth: u8,            // Maximum number of ray bounces into scene
+    center: Point,            // Camera center
+    pixel00_loc: Point,       // Location of pixel 0, 0
+    pixel_delta_u: DVec3,     // Offset to pixel to the right
+    pixel_delta_v: DVec3,     // Offset to pixel below
 }
 
 impl Camera {
@@ -153,8 +162,8 @@ impl Camera {
         let pixel_delta_v = viewport_v / height as f64;
 
         // Calculate the location of the upper left pixel.
-        let viewport_upper_left = center
-            - dvec3(0.0, 0.0, focal_length) - viewport_u/2.0 - viewport_v/2.0;
+        let viewport_upper_left =
+            center - dvec3(0.0, 0.0, focal_length) - viewport_u / 2.0 - viewport_v / 2.0;
         let pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
 
         let samples_per_pixel = 10;
@@ -192,19 +201,23 @@ impl Camera {
                 (255.9999 * INTENSITY.clamp(self.pixel_samples_scale * color.x)) as u8,
                 (255.9999 * INTENSITY.clamp(self.pixel_samples_scale * color.y)) as u8,
                 (255.9999 * INTENSITY.clamp(self.pixel_samples_scale * color.z)) as u8,
-                255_u8]);
+                255_u8,
+            ]);
         }
     }
 
     fn ray_color(&self, ray: &Ray, depth: u8, scene: &Scene) -> Color {
         // If we've exceeded the ray bounce limit, no more light is gathered.
         if depth <= 0 {
-            return Color::new(0.0,0.0,0.0);
+            return Color::new(0.0, 0.0, 0.0);
         }
 
         let rec = scene.hit(ray, Interval::new(0.001, f64::INFINITY));
         if let Some(rec) = rec {
-            let scattered = &mut Ray { origin: Default::default(), direction: Default::default() };
+            let scattered = &mut Ray {
+                origin: Default::default(),
+                direction: Default::default(),
+            };
             let mut attenuation = Color::default();
             return match rec.material.clone() {
                 Material::Lambertian(ref lambertian) => {
@@ -221,7 +234,7 @@ impl Camera {
                         Color::new(0.0, 0.0, 0.0)
                     }
                 }
-            }
+            };
         }
 
         let unit_direction = ray.direction.normalize();
@@ -237,7 +250,7 @@ impl Camera {
             + ((w + offset.x) * self.pixel_delta_u)
             + ((h + offset.y) * self.pixel_delta_v);
 
-        return Ray::new(self.center,  pixel_sample - self.center);
+        return Ray::new(self.center, pixel_sample - self.center);
     }
 
     // Returns the vector to a random point in the [-.5,-.5]-[+.5,+.5] unit square.
@@ -256,14 +269,11 @@ struct Ray {
 
 impl Ray {
     fn new(origin: Point, direction: DVec3) -> Self {
-        Self {
-            origin,
-            direction,
-        }
+        Self { origin, direction }
     }
 
     fn at(&self, t: f64) -> Point {
-        return self.origin + t*self.direction;
+        return self.origin + t * self.direction;
     }
 }
 
@@ -293,7 +303,11 @@ impl HitRecord {
         // NOTE: the parameter `outward_normal` is assumed to have unit length.
 
         self.front_face = ray.direction.dot(*outward_normal) < 0.0;
-        self.normal = if self.front_face { *outward_normal } else { -(*outward_normal) };
+        self.normal = if self.front_face {
+            *outward_normal
+        } else {
+            -(*outward_normal)
+        };
     }
 }
 
@@ -310,10 +324,7 @@ struct Interval {
 
 impl Interval {
     const fn new(min: f64, max: f64) -> Self {
-        Self {
-            min,
-            max,
-        }
+        Self { min, max }
     }
 
     fn _size(&self) -> f64 {
@@ -330,10 +341,10 @@ impl Interval {
 
     fn clamp(&self, x: f64) -> f64 {
         if x < self.min {
-            return self.min
+            return self.min;
         };
         if x > self.max {
-            return self.max
+            return self.max;
         };
         return x;
     }
@@ -368,12 +379,16 @@ struct Lambertian {
 
 impl Lambertian {
     fn new(albedo: Color) -> Self {
-        Self {
-            albedo,
-        }
+        Self { albedo }
     }
 
-    fn scatter(&self, _r_in: &Ray, rec: HitRecord, attenuation: &mut Color, scattered: &mut Ray) -> bool {
+    fn scatter(
+        &self,
+        _r_in: &Ray,
+        rec: HitRecord,
+        attenuation: &mut Color,
+        scattered: &mut Ray,
+    ) -> bool {
         let mut scatter_direction = rec.normal + random_vec3_in_unit_sphere();
 
         // Catch degenerate scatter direction
@@ -401,8 +416,13 @@ impl Metal {
         }
     }
 
-    fn scatter(&self, r_in: &Ray, rec: HitRecord, attenuation: &mut Color, scattered: &mut Ray) -> bool {
-
+    fn scatter(
+        &self,
+        r_in: &Ray,
+        rec: HitRecord,
+        attenuation: &mut Color,
+        scattered: &mut Ray,
+    ) -> bool {
         let mut reflected = reflect(r_in.direction, rec.normal);
         reflected = reflected.normalize() + (self.fuzzy * random_vec3_in_unit_sphere());
 
@@ -418,7 +438,7 @@ impl Metal {
 pub(crate) struct Sphere {
     center: Point,
     radius: f64,
-    material: Material
+    material: Material,
 }
 
 impl Sphere {
@@ -436,9 +456,9 @@ impl Hittable for Sphere {
         let oc = self.center - ray.origin;
         let a = ray.direction.length_squared();
         let h = ray.direction.dot(oc);
-        let c = oc.length_squared() - self.radius*self.radius;
+        let c = oc.length_squared() - self.radius * self.radius;
 
-        let discriminant = h*h - a*c;
+        let discriminant = h * h - a * c;
         if discriminant < 0.0 {
             return None;
         }
